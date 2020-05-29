@@ -339,7 +339,7 @@ public extension LocalizedError {
 	}
 }
 
-extension LocalizedError {
+public extension LocalizedError {
 	var description: String {
 		return """
 		\(errorDescription ?? prefixedErrorCode)\
