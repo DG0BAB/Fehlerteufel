@@ -350,6 +350,8 @@ public extension LocalizedError {
 	}
 }
 
+public typealias FTLocalizedError = Fehlerteufel.LocalizedError
+
 /** Stores error specific details.
 
 When creating an error, an instance of this type is used, to store all details.
