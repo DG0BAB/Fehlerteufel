@@ -12,18 +12,16 @@ import AppKit
 #endif
 import Clause
 
-
-public protocol SeverityDescriptive {
+/// Conforming types are able to deliver a localized description of a `Severity`
+public protocol SeverityDescribing {
 	/// A localized text, describing the severity
 	var severityDescription: String { get }
 }
 
-/**
-Severity levels for Errors
-*/
-public enum Severity: SeverityDescriptive, TableNameProviding {
+/// Severity levels for Errors
+public enum Severity: SeverityDescribing, StringsFileNameProviding {
 	/// Severity descriptions a read from Severity.strings by default
-	static public var tableName: String { return "Severity" }
+	static public var baseStringsFileName: String { return "Severity" }
 
 	/// Just an informational note.
 	case info
@@ -40,7 +38,7 @@ public enum Severity: SeverityDescriptive, TableNameProviding {
 	/// Localized textual description of the severity.
 	public var severityDescription: String {
 		let severityString = "severity.\(self)"
-		return NSLocalizedString(severityString, tableName: Severity.tableName, value: severityString, comment: "")
+		return NSLocalizedString(severityString, tableName: Severity.baseStringsFileName, value: severityString, comment: "")
 	}
 }
 
