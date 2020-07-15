@@ -18,7 +18,7 @@ import Clause
 Error-Type with severity, localization support and position independent
 parameter/value substitution.
 
-All text used for title, failure-reason and recovery suggestion, constructed using
+All text used for description, failure-reason and recovery suggestion, constructed using
 a `Clause`, which in turn uses Swift 5 `ExpressibleByStringInterpolation` protocol, to make it
 possible to specify parameter values directly within the string literal.
 
@@ -28,8 +28,8 @@ let path = "/data"
 let name = "VeryImportantData"
 let error: MyError = .fileError { "File \("name:", name) not found at path \("path:", path)." }
 ```
-This creates a `fileError` of Type `MyError` with internal code "fileError",
-an `errorDescription` with "fileError" and a `failureReason`: "File VeryImportantData not found at path /data."
+This creates an instance of `MyError` with `name` and `errorDescription` of
+"fileError" and a `failureReason`: "File VeryImportantData not found at path /data."
 
 To make i.e. the `errorDescription` more appealing you just add a locaization strings file.
 ```
@@ -43,13 +43,13 @@ If you want to provide i.e. german localization you just add the appropriate str
 "MyError.fileError" = "Datei Fehler";
 "MyError.fileError.failure.File \\(name: %@) not found at path \\(path: %@)." = "Unter “\\(path %@)” konnte die Datei “\\(name: %@)” nicht gefunden werden.";
 ```
-Now you get "Datei Fehler" for the `errorDescription` and
-"Unter “/data” konnte die Datei “VeryImportantData” nicht gefunden werden." for the `failureReason`
+Now, when your language is set to german, you get "Datei Fehler" for the `errorDescription`.
+For the `failureReason` you get "Unter “/data” konnte die Datei “VeryImportantData” nicht gefunden werden.".
 
-This also is a great example to show parameter position independency. The original
+This is also a great example to show parameter position independency. The original
 `failureReason` put the `name` in front of the `path`. In the transalation `path` is used first.
 
-__Note:__ The parameter `title` maps to `errorDescription` of the `Swift.LocalizedError`
+__Note:__ If you don't specify an `errorDescription` explicitly the `name` is taken.
 
 To create your own error type, only a few lines of code are needed.
 
@@ -57,80 +57,100 @@ To create your own error type, only a few lines of code are needed.
 struct MyError: LocalizedError {
 	// All localizations are retrived from a file called "MyErrors.strings"
 	// If you dont specify this, all localizations a taken from "Localizable.string"
-	static var tableName: String { return "MyErrors" }
+	static var baseStringsFileName: String { return "MyErrors" }
 
 	// Required to fulfill protocol conformance
-	let specifics: ErrorSpecifics
-	init(_ specifics: ErrorSpecifics) { self.specifics = specifics }
+	let store: ErrorStoring
 
-	static func fileError(_ code: String = "\(#function)", title: Clause? = nil, recovery: Clause? = nil, failure: FailureText? = nil) -> MyError {
-		return Error(code, .warning, title: title, recovery: recovery, failure)
+	static func fileError(description: Clause? = nil, failure: FailureText? = nil) -> MyError {
+		return Error(name: #function, severity: .warning, failure: failure)
+	}
+}
+```
+If you want your error to have a code, a different title, recovery suggection, and a causing error just add the desired parameters to your static function
+and call the `Error()` method with the appropriate parameters like shown in the next example which is an extension to the `MyError` created above:
+```
+extension MyError {
+	static func invalidData(cause: Error, failure: FailureText? = nil) -> MyError {
+		return Error(name: #function, code: 102, severity: .error, title: "Invalid Data", cause: cause, recovery: "Please try again", failure: failure)
 	}
 }
 ```
 To add more, just copy&paste the static function and rename it to whatever name you want your error to have. Don't forget to adjust the severity to your needs.
-The easiest usage of this error is
+The easiest usage of the `fileError` from the first example is
 ```
-let error = MyError.fileError
+let error = MyError.fileError()
 ```
-This creates a `fileError` with a severity `.warning` with `code` and `errorDescription` set to "fileError".
+This creates a `MyError` with `name` "fileError" with a severity of `.warning`, no `code` and `errorDescription` set to "fileError".
 ```
 let name = "Customer"
-let error = MyError.fileError(title: "File Error Occurred") { "File “\("name:", name)” was not found." }
+let error = MyError.fileError(description: "File Error Occurred") { "File “\("name:", name)” was not found." }
 ```
-This creates a `fileError` with a severity `.warning` with `code` set to "fileError", `errorDescription` set to "File Error Occurred" and `failureReason` set to "File “Customer” was not found".
-To specify localizations, just add "MyError.string" files to the appropriate .lproj-directories or let Xcode doing it for you.
+This creates a `MyError` with name "fileError", with a severity `.warning`, no `code`, `errorDescription` set to "File Error Occurred"
+and `failureReason` set to "File “Customer” was not found".
+To specify localizations, just add "MyErrors.string" files to the appropriate .lproj-directories or let Xcode doing it for you.
 
-If you want to localize the error title while `code` and `title` are the same just add the following line to the localization file:
+If you want to localize the error title while `name` and `description` are the same (which is the default)
+just add the following line to the localization file:
 ```
 "MyError.fileError" = "File Error";
 ```
-If you specify a title explicitly, like in the example above, the localization should look like:
+If you specify a description explicitly, like in the example above, the localization should look like:
 ```
 "MyError.fileError.File Error Occured" = "Occurence of file error";
 ```
 */
-public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertible, TableNameProviding {
+public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertible, StringsFileNameProviding {
 
 	typealias ErrorAction = (LocalizedError) -> Void
 	
-	/** Store for error details.
+	/// Store for error details.
+	///
+	/// This has to be provided by the concrete error type
+	///
+	/// __Required.__
+	var store: ErrorStoring { get }
 
-	This has to be provided by the concrete error type
-	__Required.__
-	*/
-	var specifics: ErrorSpecifics { get }
+	/// Initializes the instance with the details of the error
+	///
+	/// This is automatically provided by the concrete error type
+	/// because of the required `store` property
+	///
+	/// __Required.__ Implementation provided automatically
+	init(store: ErrorStoring)
 
-	
-	/** Initialzes the error with the given details
+	/// A unique `name` for this error.
+	///
+	/// The `name` uniquely identifies the error and is used to search
+	/// for the localizations in the strings file.
+	///
+	/// __Required.__ Default implementation provided
+	var name: String { get }
 
-	This has to be provided by the concrete error type
-	__Required.__
-	*/
-	init(_ specifics: ErrorSpecifics)
+	/// The code of this error or  nil, if this error has  no code
+	///
+	/// __Required.__ Default implementation provided
+	var code: Int? { get }
 
-	var code: String { get }
-	
+	/// The severity of this error or nil, if no severity was given
+	///
+	/// __Required.__ Default implementation provided
+	var severity: Severity? { get }
+
 	/// Contains the `Error` that caused this error or nil
+	///
+	/// __Required.__ Default implementation provided
 	var cause: Error? { get }
 
-	
-	/** The severity of this error.
-
-	__Required.__
-	*/
-	var severity: Severity { get }
-
-	
 	/** This prefix is prepended to keys when retrieving the localized string
-	for the error title from a .strings-file.
+	for the error description from a .strings-file.
 
 	Defaults to the name of the concrete type. If you i.e. declare a type
-	`MyError: LocalizedError` with `code` `fileNotFound`, the resulting key for
+	`MyError: LocalizedError` with `name` "fileNotFound", the resulting key for
 	accessing the strings file will be "MyError.fileNotFound"
 
-	If you don't want any prefix just overwrite this in your error type and
-	return an empty "" string.
+	If you want a different prefix or no prefix at all just overwrite this
+	in your error type and	return the desired string.
 
 	__Required.__ Default implementation provided
 	*/
@@ -142,12 +162,12 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 
 	Defaults to "failure"
 
-	If you i.e. declare a type `MyError: LocalizedError` with `code` `fileNotFound`,
+	If you i.e. declare a type `MyError: LocalizedError` with `name` "fileNotFound",
 	the resulting key for accessing the failure reason in the strings file
 	will be "MyError.fileNotFound.failure"
 
-	If you don't want any prefix just overwrite this in your error type and
-	return an empty "" string.
+	If you want a different prefix or no prefix at all just overwrite this
+	in your error type and	return the desired string.
 
 	__Required.__ Default implementation provided
 	*/
@@ -159,12 +179,12 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 
 	Defaults to "recovery"
 
-	If you i.e. declare a type `MyError: LocalizedError` with `code` `fileNotFound`,
+	If you i.e. declare a type `MyError: LocalizedError` with `name` "fileNotFound",
 	the resulting key for accessing the recovery suggestion in the strings file
 	will be "MyError.fileNotFound.recovery"
 
-	If you don't want any prefix just overwrite this in your error type and
-	return an empty "" string.
+	If you want a different prefix or no prefix at all just overwrite this
+	in your error type and	return the desired string.
 
 	__Required.__ Default implementation provided
 	*/
@@ -173,7 +193,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	
 	#if canImport(UIKit)
 	
-	/** A `UIAlertController` with `title` initialized to the localized title
+	/** A `UIAlertController` with `title` initialized to the localized description
 	and `message` set to the localized failure text of this error.
 
 	The default `preferredStyle` is set to `.alert`
@@ -218,6 +238,11 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	#endif
 }
 
+public protocol ErrorStoring {}
+
+public typealias FTLocalizedError = Fehlerteufel.LocalizedError
+
+
 /// Type that returns the `Clause` that is used as the failure text of the error
 public typealias FailureText = () -> Clause
 
@@ -230,67 +255,93 @@ public extension LocalizedError {
 	own error types and how to use them in code.
 
 	- Parameters:
-		- code: Internal error code. Use "\(#function)" as default value to take the name of the function. All text is taken up to the first "(".
-	  	- severity: One of the severity defined by `Severity`
-	  	- title: A `Clause` that is displayed as the title. Defaults to `code`
-		- recovery: A `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
-	  	- failure: A `Clause` that is displayed as the failure reason which is the error-message. Defaults to nil which is no error message.
-		- Returns: An instance of the concrete type that conforms `LocalizedError`
-	*/
-	static func Error(_ code: String, _ severity: Severity, cause: Error? = nil, title: Clause? = nil, recovery: Clause? = nil, _ failure: FailureText? = nil) -> Self {
-		return self.init(ErrorSpecifics(code, severity, cause: cause, title: title, recovery: recovery, failure: failure))
-	}
-
-	/** Factory method for creating errors. See `Error(_:,_:,title:,recovery:,_:)` for a description.
-
-	- Parameters:
-		- code: Internal error code. Use "\(#function)" as default value to take the name of the function. All text is taken up to the first "(".
-		- severity: One of the severity defined by `Severity`
-		- title: A `Clause` that is displayed as the title. Defaults to `code`
-		- recovery: A `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
-		- failure: A `Clause` that is displayed as the failure reason which is the error-message. Defaults to nil which is no error message.
+	  	- name: A `String` that is used the unique name. Use #function as default value to take the name of the function. All text is taken up to the first "(".
+		- code: Optional code (number) of this error.
+	  	- severity: Optional severity of the error. See `Severity` type
+	  	- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
+		- cause: An optional `Error` that caused this error
+		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
+	  	- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
 	- Returns: An instance of the concrete type that conforms `LocalizedError`
 	*/
-	static func makeError(_ code: String, _ severity: Severity, cause: Error? = nil, title: Clause? = nil, recovery: Clause? = nil, _ failure: FailureText? = nil) -> Self {
-		return Error(code, severity, cause: cause, title: title, recovery: recovery, failure)
+	static func Error(
+		name: String,
+		code: Int? = nil,
+		severity: Severity? = nil,
+		description: Clause? = nil,
+		cause: Error? = nil,
+		recovery: Clause? = nil,
+		failure: FailureText? = nil
+	) -> Self
+	{
+		return ErrorStore.makeError(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure)
+	}
+
+	/** Factory method for creating errors. See `Error(name:,code:,severity:,description:,cause:,recovery:,failure:)` for a description.
+
+	- Parameters:
+	  	- name: A `String` that is used the unique name. Use #function as default value to take the name of the function. All text is taken up to the first "(".
+		- code: Optional code (number) of this error.
+	  	- severity: Optional severity of the error. See `Severity` type
+	  	- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
+		- cause: An optional `Error` that caused this error
+		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
+	  	- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
+	- Returns: An instance of the concrete type that conforms `LocalizedError`
+	*/
+	static func makeError(
+		name: String,
+		code: Int? = nil,
+		severity: Severity? = nil,
+		description: Clause? = nil,
+		cause: Error? = nil,
+		recovery: Clause? = nil,
+		failure: FailureText? = nil
+	) -> Self
+	{
+		return Error(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure)
 	}
 
 	static func == (lhs: LocalizedError, rhs: Self) -> Bool {
-		return lhs.specifics.code == rhs.specifics.code
+		return lhs.errorStore.code == rhs.errorStore.code
 	}
 	static func != (lhs: LocalizedError, rhs: Self) -> Bool {
-		return lhs.specifics.code != rhs.specifics.code
+		return lhs.errorStore.code != rhs.errorStore.code
 	}
 
-	var code: String {
-		return specifics.code
+	var name: String {
+		return errorStore.name
+	}
+	var code: Int? {
+		return errorStore.code
 	}
 	
-	var severity: Severity {
-		return specifics.severity
+	var severity: Severity? {
+		return errorStore.severity
 	}
 
 	var cause: Error? {
-		return specifics.cause
+		return errorStore.cause
 	}
 
+
 	var errorDescription: String? {
-		let errorString = specifics.title.localization(Self.tableName) { return $0 == self.specifics.code ? self.prefix : self.prefixedErrorCode }
+		let errorString = errorStore.description.localization(Self.baseStringsFileName) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
 		return errorString
 	}
 
 	var failureReason: String? {
-		guard let failure = self.specifics.failure else { return nil }
-		return failure.localization(Self.tableName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.prefixedErrorCode).\(self.failurePrefix)" }
+		guard let failure = self.errorStore.failure else { return nil }
+		return failure.localization(Self.baseStringsFileName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
 	}
 
 	var recoverySuggestion: String? {
-		guard let recovery = self.specifics.recovery else { return nil }
-		return recovery.localization(Self.tableName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.prefixedErrorCode).\(self.recoveryPrefix)" }
+		guard let recovery = self.errorStore.recovery else { return nil }
+		return recovery.localization(Self.baseStringsFileName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
 	}
 
 	var prefix: String {
-		return name(of: self)
+		return typeName(of: self)
 	}
 
 	var failurePrefix: String {
@@ -317,13 +368,13 @@ public extension LocalizedError {
 	}
 	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style)
-		alert.addAction(UIAlertAction(title: Clause("OK").localization(Self.tableName) { _ in return self.prefix }, style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK").localization(Self.baseStringsFileName) { _ in return self.prefix }, style: .default, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style)
-		alert.addAction(UIAlertAction(title: Clause("OK").localization(Self.tableName), style: .default, handler: completion))
-		alert.addAction(UIAlertAction(title: Clause("Cancel").localization(Self.tableName) { _ in return self.prefix }, style: .cancel, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK").localization(Self.baseStringsFileName), style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("Cancel").localization(Self.baseStringsFileName) { _ in return self.prefix }, style: .cancel, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	#elseif canImport(AppKit)
@@ -334,15 +385,15 @@ public extension LocalizedError {
 	}
 	#endif
 
-	private var prefixedErrorCode: String {
-		return "\(prefix).\(self.specifics.code)"
+	private var namePrefix: String {
+		return "\(prefix).\(self.errorStore.name)"
 	}
 }
 
 public extension LocalizedError {
 	var description: String {
 		return """
-		\(errorDescription ?? prefixedErrorCode)\
+		\(errorDescription ?? namePrefix)\
 		\(failureReason != nil ? " - \(failureReason!)" : "")\
 		\(recoverySuggestion != nil ? " - \(recoverySuggestion!)" : "")\
 		\(cause != nil ? " - \(cause!.asLocalizedError?.description ?? "")" : "")
@@ -350,7 +401,21 @@ public extension LocalizedError {
 	}
 }
 
-public typealias FTLocalizedError = Fehlerteufel.LocalizedError
+fileprivate extension LocalizedError {
+	var errorStore: ErrorStore {
+		return store as! ErrorStore
+	}
+}
+
+private extension ErrorStoring where Self == ErrorStore {
+	var name: String { name }
+	var code: Int? { code }
+	var severity: Severity? { severity }
+	var description: Clause { description }
+	var cause: Error? { cause }
+	var recovery: Clause? { recovery }
+	var failure: Clause? { failure }
+}
 
 /** Stores error specific details.
 
@@ -358,33 +423,45 @@ When creating an error, an instance of this type is used, to store all details.
 The default implementation of the `LocalizedError` is using this instance for
 retrieving and returning these details.
 */
-public struct ErrorSpecifics {
-	fileprivate let code: String
-	fileprivate let severity: Severity
+private struct ErrorStore: ErrorStoring {
+	fileprivate let name: String
+	fileprivate let code: Int?
+	fileprivate let severity: Severity?
+	fileprivate let description: Clause
 	fileprivate let cause: Error?
-	fileprivate let title: Clause
 	fileprivate let recovery: Clause?
 	fileprivate let failure: Clause?
+
+	fileprivate static func makeError<T: LocalizedError>(
+		name: String,
+		code: Int? = nil,
+		severity: Severity? = nil,
+		description: Clause? = nil,
+		cause: Error? = nil,
+		recovery: Clause? = nil,
+		failure: FailureText? = nil
+	) -> T
+	{
+		return T(store: Self(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure))
+	}
 
 	/** Initialize a new instance of `ErrorSpecifics`
 
 	 - Parameters:
-	   	- code: The code this error should get. Text is taken up to the first, but not including "("
+		- name: The unique name.  Text is taken up to the first, but not including "("
+	   	- code: The code this error should get
 	   	- severity: The severity of the error
+	   	- description: The `errorDescription`. If nil, `name` is taken
 		- cause: The `Error` that caused this error or nil if there's no causing error
-	   	- title: The `errorDescription`. If nil, `code` is taken
 	   	- recovery: The `recoverySuggestion`
 	   	- failure: The `failureReason`
 	*/
-	init(_ code: String, _ severity: Severity, cause: Error? = nil, title: Clause? = nil, recovery: Clause? = nil, failure: FailureText? = nil) {
-		var code = code
-		if let endIndex = code.firstIndex(of: "(") {
-			code = String(code[..<endIndex])
-		}
+	private init(name: String, code: Int? =  nil, severity: Severity? = nil, description: Clause? = nil, cause: Error? = nil, recovery: Clause? = nil, failure: FailureText? = nil) {
+		self.name = String(name[..<(name.firstIndex(of: "(") ?? name.endIndex)])
 		self.code = code
 		self.severity = severity
+		self.description = description ?? Clause(stringLiteral: name)
 		self.cause = cause
-		self.title = title ?? Clause(stringLiteral: code)
 		self.recovery = recovery
 		self.failure = failure?()
 	}
@@ -394,7 +471,7 @@ public struct ErrorSpecifics {
 ///
 /// - Parameter instance: Instance to extract the type name from
 /// - Returns: String containing the name of the instance type
-func name<T: Any>(of instance: T) -> String {
+fileprivate func typeName<T: Any>(of instance: T) -> String {
 	return String(describing: type(of: instance)).replacingOccurrences(of: ".Type", with: "")
 }
 
@@ -411,6 +488,6 @@ extension Error {
 
 	static func == (lhs: Error, rhs: LocalizedError) -> Bool {
 		guard let lhs = lhs as? LocalizedError else { return false }
-		return lhs.specifics.code == rhs.specifics.code
+		return lhs.errorStore.code == rhs.errorStore.code
 	}
 }
