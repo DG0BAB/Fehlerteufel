@@ -58,8 +58,9 @@ extension NSError {
 	
 	var alert: NSAlert {
 		let alert = NSAlert(error: self)
-		if let localizedError = self as? LocalizedError {
-			localizedError.severity.setStyleForAlert(alert)
+		if let localizedError = self as? LocalizedError,
+			let severity = localizedError.severity {
+			severity.setStyleForAlert(alert)
 		}
 		return alert
 	}

@@ -380,7 +380,9 @@ public extension LocalizedError {
 	#elseif canImport(AppKit)
 	var alert: NSAlert {
 		let alert = NSAlert(error: self)
-		severity.setStyleForAlert(alert)
+		if let severity = severity {
+			severity.setStyleForAlert(alert)
+		}
 		return alert
 	}
 	#endif
