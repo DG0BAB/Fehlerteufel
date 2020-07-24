@@ -457,7 +457,8 @@ private struct ErrorStore: ErrorStoring {
 	   	- failure: The `failureReason`
 	*/
 	private init(name: String, code: Int? =  nil, severity: Severity? = nil, description: Clause? = nil, cause: Error? = nil, recovery: Clause? = nil, failure: FailureText? = nil) {
-		self.name = String(name[..<(name.firstIndex(of: "(") ?? name.endIndex)])
+		let name = String(name[..<(name.firstIndex(of: "(") ?? name.endIndex)])
+		self.name = name
 		self.code = code
 		self.severity = severity
 		self.description = description ?? Clause(stringLiteral: name)
@@ -475,7 +476,7 @@ fileprivate func typeName<T: Any>(of instance: T) -> String {
 	return String(describing: type(of: instance)).replacingOccurrences(of: ".Type", with: "")
 }
 
-extension Error {
+public extension Error {
 	/// Returns this `Error` as a `LocalizedError`
 	/// If casting is impossible, it logs the error and returns nil
 	var asLocalizedError: LocalizedError? {
