@@ -12,7 +12,7 @@ import AppKit
 #elseif canImport(UIKit)
 import UIKit
 #endif
-import Clause
+@_exported import Clause
 
 /**
 Error-Type with severity, localization support and position independent
@@ -326,18 +326,18 @@ public extension LocalizedError {
 
 
 	var errorDescription: String? {
-		let errorString = errorStore.description.localization(Self.baseStringsFileName) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
+		let errorString = errorStore.description.localized(Self.baseStringsFileName) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
 		return errorString
 	}
 
 	var failureReason: String? {
 		guard let failure = self.errorStore.failure else { return nil }
-		return failure.localization(Self.baseStringsFileName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
+		return failure.localized(Self.baseStringsFileName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
 	}
 
 	var recoverySuggestion: String? {
 		guard let recovery = self.errorStore.recovery else { return nil }
-		return recovery.localization(Self.baseStringsFileName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
+		return recovery.localized(Self.baseStringsFileName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
 	}
 
 	var prefix: String {
@@ -368,13 +368,13 @@ public extension LocalizedError {
 	}
 	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style)
-		alert.addAction(UIAlertAction(title: Clause("OK").localization(Self.baseStringsFileName) { _ in return self.prefix }, style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.baseStringsFileName) { _ in return self.prefix }, style: .default, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style)
-		alert.addAction(UIAlertAction(title: Clause("OK").localization(Self.baseStringsFileName), style: .default, handler: completion))
-		alert.addAction(UIAlertAction(title: Clause("Cancel").localization(Self.baseStringsFileName) { _ in return self.prefix }, style: .cancel, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.baseStringsFileName), style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("Cancel").localized(Self.baseStringsFileName) { _ in return self.prefix }, style: .cancel, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	#elseif canImport(AppKit)
