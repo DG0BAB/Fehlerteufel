@@ -127,7 +127,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	/// __Required.__ Default implementation provided
 	var name: String { get }
 
-	/// The code of this error or  nil, if this error has  no code
+	/// The code of this error or  nil, if this error has no code
 	///
 	/// __Required.__ Default implementation provided
 	var code: Int? { get }
@@ -189,65 +189,50 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	__Required.__ Default implementation provided
 	*/
 	var recoveryPrefix: String { get }
-
-	
-	#if canImport(UIKit)
-	
-	/** A `UIAlertController` with `title` initialized to the localized description
-	and `message` set to the localized failure text of this error.
-
-	The default `preferredStyle` is set to `.alert`
-	__Required.__ Default implementation provided
-	*/
-	func alertController(_ preferredStyle: UIAlertController.Style) -> UIAlertController
-	
-	#elseif canImport(AppKit)
-	
-	/// A `NSAlert` initialized with this error
-	/// __Required.__ Default implementation provided
-	var alert: NSAlert { get }
-	
-	#endif
-
-	#if canImport(UIKit)
-	
-	/** Presents this `LocalizedError` as an `UIAlertController` together with an
-	OK `UIAlertAction` Button
-
-	__Required.__ Default implementation provided
-
-	- Parameters:
-		- viewController: The `UIViewController` used as the presenting view controller
-	   	- style: `UIAlertController` style. Defaults to .alert
-		- completion: If given, it gets called when the OK action was selected
-	*/
-	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style, completion: ((UIAlertAction) -> Void)?)
-
-	/** Presents this `LocalizedError` as an `UIAlertController` together with
-	OK and Cancel `UIAlertAction` Buttons.
-
-	__Required.__ Default implementation provided
-
-	- Parameters:
-	- viewController: The `UIViewController` used as the presenting view controller
-	- style: `UIAlert*Controller` style. Defaults to .alert
-	- completion: If given, it gets called when the OK or Cancel action was selected
-	*/
-	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style, completion: ((UIAlertAction) -> Void)?)
-	
-	#endif
 }
 
-public protocol ErrorStoring {}
-
+/// Typealias for `Fehlerteufel.LocalizedError` to remove ambiguity with `Foundation.LocalizedError`
 public typealias FTLocalizedError = Fehlerteufel.LocalizedError
 
+// Default implementation for basic error-values
+public extension LocalizedError {
+
+	var name: String {
+		return (store as! ErrorStore).name //errorStore.name
+	}
+	var code: Int? {
+		return errorStore.code
+	}
+	
+	var severity: Severity? {
+		return errorStore.severity
+	}
+
+	var cause: Error? {
+		return errorStore.cause
+	}
+
+	var errorDescription: String? {
+		let errorString = errorStore.description.localized(Self.baseStringsFileName) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
+		return errorString
+	}
+
+	var failureReason: String? {
+		guard let failure = self.errorStore.failure else { return nil }
+		return failure.localized(Self.baseStringsFileName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
+	}
+
+	var recoverySuggestion: String? {
+		guard let recovery = self.errorStore.recovery else { return nil }
+		return recovery.localized(Self.baseStringsFileName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
+	}
+}
 
 /// Type that returns the `Clause` that is used as the failure text of the error
 public typealias FailureText = () -> Clause
 
+// Extension for `LocalizedError` creation
 public extension LocalizedError {
-
 	/** Factory method offering constructor like creation of errors
 
 	You normally call this method from within your static function of your custom error type.
@@ -255,13 +240,13 @@ public extension LocalizedError {
 	own error types and how to use them in code.
 
 	- Parameters:
-	  	- name: A `String` that is used the unique name. Use #function as default value to take the name of the function. All text is taken up to the first "(".
+		- name: A `String` that is used as the unique name. Use #function as default value to take the name of the function. All text is taken up to the first "(".
 		- code: Optional code (number) of this error.
-	  	- severity: Optional severity of the error. See `Severity` type
-	  	- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
+		- severity: Optional severity of the error. See `Severity` type
+		- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
 		- cause: An optional `Error` that caused this error
 		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
-	  	- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
+		- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
 	- Returns: An instance of the concrete type that conforms `LocalizedError`
 	*/
 	static func Error(
@@ -280,13 +265,13 @@ public extension LocalizedError {
 	/** Factory method for creating errors. See `Error(name:,code:,severity:,description:,cause:,recovery:,failure:)` for a description.
 
 	- Parameters:
-	  	- name: A `String` that is used the unique name. Use #function as default value to take the name of the function. All text is taken up to the first "(".
+		- name: A `String` that is used as the unique name. Use #function as default value to take the name of the function. All text is taken up to the first "(".
 		- code: Optional code (number) of this error.
-	  	- severity: Optional severity of the error. See `Severity` type
-	  	- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
+		- severity: Optional severity of the error. See `Severity` type
+		- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
 		- cause: An optional `Error` that caused this error
 		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
-	  	- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
+		- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
 	- Returns: An instance of the concrete type that conforms `LocalizedError`
 	*/
 	static func makeError(
@@ -301,45 +286,10 @@ public extension LocalizedError {
 	{
 		return Error(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure)
 	}
+}
 
-	static func == (lhs: LocalizedError, rhs: Self) -> Bool {
-		return lhs.errorStore.code == rhs.errorStore.code
-	}
-	static func != (lhs: LocalizedError, rhs: Self) -> Bool {
-		return lhs.errorStore.code != rhs.errorStore.code
-	}
-
-	var name: String {
-		return errorStore.name
-	}
-	var code: Int? {
-		return errorStore.code
-	}
-	
-	var severity: Severity? {
-		return errorStore.severity
-	}
-
-	var cause: Error? {
-		return errorStore.cause
-	}
-
-
-	var errorDescription: String? {
-		let errorString = errorStore.description.localized(Self.baseStringsFileName) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
-		return errorString
-	}
-
-	var failureReason: String? {
-		guard let failure = self.errorStore.failure else { return nil }
-		return failure.localized(Self.baseStringsFileName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
-	}
-
-	var recoverySuggestion: String? {
-		guard let recovery = self.errorStore.recovery else { return nil }
-		return recovery.localized(Self.baseStringsFileName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
-	}
-
+// Default implementation for prefixes
+public extension LocalizedError {
 	var prefix: String {
 		return typeName(of: self)
 	}
@@ -352,11 +302,82 @@ public extension LocalizedError {
 		return "recovery"
 	}
 
-	#if canImport(UIKit)
-	func alertController(_ preferredStyle: UIAlertController.Style = .alert ) -> UIAlertController {
+	private var namePrefix: String {
+		return "\(prefix).\(self.errorStore.name)"
+	}
+}
+
+// Extension for comparing `LocalizedError`s
+public extension LocalizedError {
+	static func == (lhs: LocalizedError, rhs: Self) -> Bool {
+		return lhs.errorStore.code == rhs.errorStore.code
+	}
+	static func != (lhs: LocalizedError, rhs: Self) -> Bool {
+		return lhs.errorStore.code != rhs.errorStore.code
+	}
+}
+
+// Default implementation for `CustomStringConvertible`
+public extension LocalizedError {
+	var description: String {
+		return """
+		\(errorDescription ?? namePrefix)\
+		\(failureReason ?? "")\
+		\(recoverySuggestion ?? "")\
+		\(cause != nil ? " - \(cause!.asLocalizedError?.description ?? "")" : "")
+		"""
+	}
+}
+
+// Extension for shortDescription
+public extension LocalizedError {
+
+	/// Same as `description` but without the causing error(s)
+	var shortDescription: String {
+		return """
+		\(errorDescription ?? namePrefix)\
+		\(failureReason ?? "")\
+		\(recoverySuggestion ?? "")
+		"""
+	}
+}
+
+public extension Error {
+	/// Returns this `Error` as a `LocalizedError`
+	/// If casting is impossible, it logs the error and returns nil
+	var asLocalizedError: FTLocalizedError? {
+		guard let localizedError = self as? FTLocalizedError else {
+			print("Non localized error: \(self)")
+			return nil
+		}
+		return localizedError
+	}
+
+	static func == (lhs: Error, rhs: FTLocalizedError) -> Bool {
+		guard let lhs = lhs as? FTLocalizedError else { return false }
+		return lhs.errorStore.code == rhs.errorStore.code
+	}
+}
+
+// Convenience methods for iOS
+#if canImport(UIKit)
+public extension LocalizedError {
+	/**
+	A `UIAlertController` with `title` initialized to the localized description
+	and `message` set to the localized failure text of this error.
+
+	__Required.__ Default implementation provided
+
+	- Parameters:
+		- preferredStyle: The default `preferredStyle` is set to `.alert`
+		- withCause: true, takes text of causing errors into account, false doesn't. Default is true
+	- Returns: UIAlertController
+	*/
+	func alertController(_ preferredStyle: UIAlertController.Style = .alert, withCause: Bool = true) -> UIAlertController {
 		var message = self.failureReason;
-		if let cause = self.cause?.asLocalizedError?.failureReason ?? self.cause?.localizedDescription,
-			cause.count > 0 {
+		if withCause,
+		   let cause = self.cause?.asLocalizedError?.failureReason ?? self.cause?.localizedDescription,
+		   !cause.isEmpty {
 			message = message?.count ?? 0 > 0 ? message! + "\n" + cause : cause
 		}
 		if let recoverySuggestion = recoverySuggestion,
@@ -366,18 +387,48 @@ public extension LocalizedError {
 		let alertController = UIAlertController(title: errorDescription, message: message, preferredStyle: preferredStyle)
 		return alertController
 	}
-	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
-		let alert = self.alertController(style)
+
+	/** Presents this `LocalizedError` as an `UIAlertController` together with an
+	OK `UIAlertAction` Button
+
+	__Required.__ Default implementation provided
+
+	- Parameters:
+		- viewController: The `UIViewController` used as the presenting view controller
+		- style: `UIAlertController` style. Defaults to .alert
+		- withCause: true, takes text of causing errors into account, false doesn't. Default is true
+		- completion: If given, it gets called when the OK action was selected
+	*/
+	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, withCause: Bool = true, completion: ((UIAlertAction) -> Void)? = nil) {
+		let alert = self.alertController(style, withCause: withCause)
 		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.baseStringsFileName) { _ in return self.prefix }, style: .default, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
-	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
-		let alert = self.alertController(style)
+	/** Presents this `LocalizedError` as an `UIAlertController` together with
+	OK and Cancel `UIAlertAction` Buttons.
+
+	__Required.__ Default implementation provided
+
+	- Parameters:
+		- viewController: The `UIViewController` used as the presenting view controller
+		- style: `UIAlert*Controller` style. Defaults to .alert
+		- withCause: true, takes text of causing errors into account, false doesn't. Default is true
+		- completion: If given, it gets called when the OK or Cancel action was selected
+	*/
+	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, withCause: Bool = true, completion: ((UIAlertAction) -> Void)? = nil) {
+		let alert = self.alertController(style, withCause: withCause)
 		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.baseStringsFileName), style: .default, handler: completion))
 		alert.addAction(UIAlertAction(title: Clause("Cancel").localized(Self.baseStringsFileName) { _ in return self.prefix }, style: .cancel, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
-	#elseif canImport(AppKit)
+}
+#endif
+
+// Convenience methods for macOS
+#if canImport(AppKit)
+public extension LocalizedError {
+	/// A `NSAlert` initialized with this error
+	/// __Required.__ Default implementation provided
 	var alert: NSAlert {
 		let alert = NSAlert(error: self)
 		if let severity = severity {
@@ -385,31 +436,14 @@ public extension LocalizedError {
 		}
 		return alert
 	}
-	#endif
-
-	private var namePrefix: String {
-		return "\(prefix).\(self.errorStore.name)"
-	}
 }
+#endif
 
-public extension LocalizedError {
-	var description: String {
-		return """
-		\(errorDescription ?? namePrefix)\
-		\(failureReason != nil ? " - \(failureReason!)" : "")\
-		\(recoverySuggestion != nil ? " - \(recoverySuggestion!)" : "")\
-		\(cause != nil ? " - \(cause!.asLocalizedError?.description ?? "")" : "")
-		"""
-	}
-}
+// MARK: - Error Storing
 
-fileprivate extension LocalizedError {
-	var errorStore: ErrorStore {
-		return store as! ErrorStore
-	}
-}
+public protocol ErrorStoring {}
 
-private extension ErrorStoring where Self == ErrorStore {
+fileprivate extension ErrorStoring where Self == ErrorStore {
 	var name: String { name }
 	var code: Int? { code }
 	var severity: Severity? { severity }
@@ -419,6 +453,11 @@ private extension ErrorStoring where Self == ErrorStore {
 	var failure: Clause? { failure }
 }
 
+private extension LocalizedError {
+	var errorStore: ErrorStore {
+		return store as! ErrorStore
+	}
+}
 /** Stores error specific details.
 
 When creating an error, an instance of this type is used, to store all details.
@@ -450,7 +489,7 @@ private struct ErrorStore: ErrorStoring {
 	/** Initialize a new instance of `ErrorSpecifics`
 
 	 - Parameters:
-		- name: The unique name.  Text is taken up to the first, but not including "("
+		- name: The unique name. Text is taken up to the first, but not including "("
 	   	- code: The code this error should get
 	   	- severity: The severity of the error
 	   	- description: The `errorDescription`. If nil, `name` is taken
@@ -476,21 +515,4 @@ private struct ErrorStore: ErrorStoring {
 /// - Returns: String containing the name of the instance type
 fileprivate func typeName<T: Any>(of instance: T) -> String {
 	return String(describing: type(of: instance)).replacingOccurrences(of: ".Type", with: "")
-}
-
-public extension Error {
-	/// Returns this `Error` as a `LocalizedError`
-	/// If casting is impossible, it logs the error and returns nil
-	var asLocalizedError: LocalizedError? {
-		guard let localizedError = self as? LocalizedError else {
-			print("Non localized error: \(self)")
-			return nil
-		}
-		return localizedError
-	}
-
-	static func == (lhs: Error, rhs: LocalizedError) -> Bool {
-		guard let lhs = lhs as? LocalizedError else { return false }
-		return lhs.errorStore.code == rhs.errorStore.code
-	}
 }
