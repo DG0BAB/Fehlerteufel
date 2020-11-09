@@ -1,0 +1,11 @@
+/* 
+  Severity.strings
+  Apotheken
+
+  Created by Joachim Deelen on 22.03.19.
+  Copyright © 2019 DAN Netzwerk Deutscher Apotheker GmbH. All rights reserved.
+*/
+"severity.info"="Hinweis";
+"severity.warning"="Warnung";
+"severity.error"="Fehler";
+"severity.fatal"="Schwerer Fehler";
