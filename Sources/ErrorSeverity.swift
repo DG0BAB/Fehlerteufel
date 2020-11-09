@@ -19,9 +19,12 @@ public protocol SeverityDescribing {
 }
 
 /// Severity levels for Errors
-public enum Severity: SeverityDescribing, StringsFileNameProviding {
+public enum Severity: SeverityDescribing, LocalizationMetadataProviding {
+
+
 	/// Severity descriptions a read from Severity.strings by default
-	static public var baseStringsFileName: String { return "Severity" }
+	static public var stringsFileName: String { return "Severity" }
+	public static var bundle: Bundle { return Bundle.module }
 
 	/// Just an informational note.
 	case info
@@ -38,7 +41,7 @@ public enum Severity: SeverityDescribing, StringsFileNameProviding {
 	/// Localized textual description of the severity.
 	public var severityDescription: String {
 		let severityString = "severity.\(self)"
-		return NSLocalizedString(severityString, tableName: Severity.baseStringsFileName, value: severityString, comment: "")
+		return NSLocalizedString(severityString, tableName: Severity.stringsFileName, bundle: Severity.bundle, value: severityString, comment: "")
 	}
 }
 

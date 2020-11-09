@@ -100,7 +100,7 @@ If you specify a description explicitly, like in the example above, the localiza
 "MyError.fileError.File Error Occured" = "Occurence of file error";
 ```
 */
-public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertible, StringsFileNameProviding {
+public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertible, LocalizationMetadataProviding {
 
 	typealias ErrorAction = (LocalizedError) -> Void
 	
@@ -213,18 +213,18 @@ public extension LocalizedError {
 	}
 
 	var errorDescription: String? {
-		let errorString = errorStore.description.localized(Self.baseStringsFileName) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
+		let errorString = errorStore.description.localized(Self.stringsFileName, bundle: Self.bundle) { return $0 == self.errorStore.name ? self.prefix : self.namePrefix }
 		return errorString
 	}
 
 	var failureReason: String? {
 		guard let failure = self.errorStore.failure else { return nil }
-		return failure.localized(Self.baseStringsFileName) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
+		return failure.localized(Self.stringsFileName, bundle: Self.bundle) { _ in return self.failurePrefix.isEmpty ? "" : "\(self.namePrefix).\(self.failurePrefix)" }
 	}
 
 	var recoverySuggestion: String? {
 		guard let recovery = self.errorStore.recovery else { return nil }
-		return recovery.localized(Self.baseStringsFileName) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
+		return recovery.localized(Self.stringsFileName, bundle: Self.bundle) { _ in return self.recoveryPrefix.isEmpty ? "" : "\(self.namePrefix).\(self.recoveryPrefix)" }
 	}
 }
 
@@ -322,8 +322,8 @@ public extension LocalizedError {
 	var description: String {
 		return """
 		\(errorDescription ?? namePrefix)\
-		\(failureReason ?? "")\
-		\(recoverySuggestion ?? "")\
+		\(failureReason.map { " \($0)" } ?? "")\
+		\(recoverySuggestion.map { " \($0)" } ?? "")\
 		\(cause != nil ? " - \(cause!.asLocalizedError?.description ?? "")" : "")
 		"""
 	}
@@ -336,8 +336,8 @@ public extension LocalizedError {
 	var shortDescription: String {
 		return """
 		\(errorDescription ?? namePrefix)\
-		\(failureReason ?? "")\
-		\(recoverySuggestion ?? "")
+		\(failureReason.map { " \($0)" } ?? "")\
+		\(recoverySuggestion.map { " \($0)" } ?? "")
 		"""
 	}
 }
@@ -401,7 +401,7 @@ public extension LocalizedError {
 	*/
 	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, withCause: Bool = true, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style, withCause: withCause)
-		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.baseStringsFileName) { _ in return self.prefix }, style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.stringsFileName, bundle: Self.bundle) { _ in return self.prefix }, style: .default, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	/** Presents this `LocalizedError` as an `UIAlertController` together with
@@ -417,8 +417,8 @@ public extension LocalizedError {
 	*/
 	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, withCause: Bool = true, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style, withCause: withCause)
-		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.baseStringsFileName), style: .default, handler: completion))
-		alert.addAction(UIAlertAction(title: Clause("Cancel").localized(Self.baseStringsFileName) { _ in return self.prefix }, style: .cancel, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK").localized(Self.stringsFileName, bundle: Self.bundle), style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("Cancel").localized(Self.stringsFileName, bundle: Self.bundle) { _ in return self.prefix }, style: .cancel, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 }
