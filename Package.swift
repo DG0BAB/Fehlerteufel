@@ -14,8 +14,8 @@ package.defaultLocalization = "en"
 package.products = [.library(name: packageName, targets: [packageName])]
 package.platforms = [.iOS(.v13), .macOS(.v10_15)]
 package.dependencies = [
-//	.package(url: "git@github.com:DG0BAB/Clause.git", .branch("develop")),
-	.package(name: "Clause", path: "../../Clause/ClausePackage"),
+	.package(url: "git@github.com:DG0BAB/Clause.git", .branch("develop")),
+//	.package(name: "Clause", path: "../../Clause/ClausePackage"),
 ]
 package.targets = [
 	.target(name: packageName, dependencies: ["Clause"], path: "Sources", resources: [Resource.process("Resources")]),
