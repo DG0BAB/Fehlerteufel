@@ -143,7 +143,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	var cause: Error? { get }
 
 	/// A dictionary with some user specific information
-	var userInfo: [String : Any] { get }
+	var userInfo: [String : Any]? { get }
 
 	/** This prefix is prepended to keys when retrieving the localized string
 	for the error description from a .strings-file.
