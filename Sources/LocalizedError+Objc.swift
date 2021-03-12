@@ -15,7 +15,7 @@ import UIKit
 import Clause
 
 @objc
-extension NSError {
+public extension NSError {
 	
 	#if canImport(UIKit)
 	
@@ -37,7 +37,7 @@ extension NSError {
 	@objc
 	func presentOkAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style)
-		alert.addAction(UIAlertAction(title: Clause("OK").localized(), style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK")^, style: .default, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	
@@ -49,8 +49,8 @@ extension NSError {
 	@objc
 	func presentOkCancelAlert(_ viewController: UIViewController, as style: UIAlertController.Style = .alert, completion: ((UIAlertAction) -> Void)? = nil) {
 		let alert = self.alertController(style)
-		alert.addAction(UIAlertAction(title: Clause("OK").localized(), style: .default, handler: completion))
-		alert.addAction(UIAlertAction(title: Clause("Cancel").localized(), style: .cancel, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("OK")^, style: .default, handler: completion))
+		alert.addAction(UIAlertAction(title: Clause("Cancel")^, style: .cancel, handler: completion))
 		viewController.present(alert, animated: true, completion: nil)
 	}
 	
