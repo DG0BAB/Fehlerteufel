@@ -309,11 +309,13 @@ public extension LocalizedError {
 
 // Extension for comparing `LocalizedError`s
 public extension LocalizedError {
+	/// Returns true, if the `name` property of both errors are the same. Otherwise false.
 	static func == (lhs: LocalizedError, rhs: Self) -> Bool {
-		return lhs.errorStore.code == rhs.errorStore.code
+		return lhs.errorStore.name == rhs.errorStore.name
 	}
+	/// Returns true, if the `name` property of both errors are not the same. Otherwise false.
 	static func != (lhs: LocalizedError, rhs: Self) -> Bool {
-		return lhs.errorStore.code != rhs.errorStore.code
+		return lhs.errorStore.name != rhs.errorStore.name
 	}
 }
 
