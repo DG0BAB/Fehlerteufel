@@ -137,7 +137,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	/// __Required.__ Default implementation provided
 	var severity: Severity? { get }
 
-	/// Contains the `Error` that caused this error or nil
+	/// The `Error` that caused this error or nil
 	///
 	/// __Required.__ Default implementation provided
 	var cause: Error? { get }
@@ -150,7 +150,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	accessing the strings file will be "MyError.fileNotFound"
 
 	If you want a different prefix or no prefix at all just overwrite this
-	in your error type and	return the desired string.
+	in your error type and return the desired string.
 
 	__Required.__ Default implementation provided
 	*/
@@ -198,7 +198,7 @@ public typealias FTLocalizedError = Fehlerteufel.LocalizedError
 public extension LocalizedError {
 
 	var name: String {
-		return (store as! ErrorStore).name //errorStore.name
+		return errorStore.name
 	}
 	var code: Int? {
 		return errorStore.code
@@ -248,7 +248,7 @@ public extension LocalizedError {
 		- userInfo: Optional dictionary `[String : Any]` which can be used to store arbitrary user defined information
 		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
 		- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
-	- Returns: An instance of the concrete type that conforms `LocalizedError`
+	- Returns: An instance of the concrete type that conforms to `LocalizedError`
 	*/
 	static func Error(
 		name: String,
@@ -275,7 +275,7 @@ public extension LocalizedError {
 		- userInfo: Optional dictionary `[String : Any]` which can be used to store arbitrary user defined information
 		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
 		- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
-	- Returns: An instance of the concrete type that conforms `LocalizedError`
+	- Returns: An instance of the concrete type that conforms to `LocalizedError`
 	*/
 	static func makeError(
 		name: String,
@@ -288,7 +288,7 @@ public extension LocalizedError {
 		failure: FailureText? = nil
 	) -> Self
 	{
-		return Error(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure)
+		return Error(name: name, code: code, severity: severity, description: description, cause: cause, userInfo: userInfo, recovery: recovery, failure: failure)
 	}
 }
 
@@ -447,19 +447,8 @@ public extension LocalizedError {
 
 // MARK: - Error Storing
 
-/// 
+/// Type for storing the details of a `LocalizedError`
 public protocol ErrorStoring {}
-
-fileprivate extension ErrorStoring where Self == ErrorStore {
-	var name: String { name }
-	var code: Int? { code }
-	var severity: Severity? { severity }
-	var description: Clause { description }
-	var cause: Error? { cause }
-	var userInfo: [String : Any ]? { userInfo }
-	var recovery: Clause? { recovery }
-	var failure: Clause? { failure }
-}
 
 private extension LocalizedError {
 	var errorStore: ErrorStore {
@@ -477,8 +466,8 @@ private struct ErrorStore: ErrorStoring {
 	fileprivate let code: Int?
 	fileprivate let severity: Severity?
 	fileprivate let description: Clause
-	fileprivate let userInfo: [String : Any]?
 	fileprivate let cause: Error?
+	fileprivate let userInfo: [String : Any]?
 	fileprivate let recovery: Clause?
 	fileprivate let failure: Clause?
 
@@ -496,7 +485,7 @@ private struct ErrorStore: ErrorStoring {
 		return T(store: Self(name: name, code: code, severity: severity, description: description, cause: cause, userInfo: userInfo, recovery: recovery, failure: failure))
 	}
 
-	/** Initialize a new instance of `ErrorSpecifics`
+	/** Initialize a new instance of `ErrorStore`
 
 	 - Parameters:
 		- name: The unique name. Text is taken up to the first, but not including "("
@@ -504,6 +493,7 @@ private struct ErrorStore: ErrorStoring {
 	   	- severity: The severity of the error
 	   	- description: The `errorDescription`. If nil, `name` is taken
 		- cause: The `Error` that caused this error or nil if there's no causing error
+		- userInfo: Optional dictionary `[String : Any]` which can be used to store arbitrary user defined information
 	   	- recovery: The `recoverySuggestion`
 	   	- failure: The `failureReason`
 	*/
