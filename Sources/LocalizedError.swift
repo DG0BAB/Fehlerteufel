@@ -245,6 +245,7 @@ public extension LocalizedError {
 		- severity: Optional severity of the error. See `Severity` type
 		- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
 		- cause: An optional `Error` that caused this error
+		- userInfo: Optional dictionary `[String : Any]` which can be used to store arbitrary user defined information
 		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
 		- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
 	- Returns: An instance of the concrete type that conforms `LocalizedError`
@@ -255,11 +256,12 @@ public extension LocalizedError {
 		severity: Severity? = nil,
 		description: Clause? = nil,
 		cause: Error? = nil,
+		userInfo: [String : Any]? = nil,
 		recovery: Clause? = nil,
 		failure: FailureText? = nil
 	) -> Self
 	{
-		return ErrorStore.makeError(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure)
+		return ErrorStore.makeError(name: name, code: code, severity: severity, description: description, cause: cause, userInfo: userInfo, recovery: recovery, failure: failure)
 	}
 
 	/** Factory method for creating errors. See `Error(name:,code:,severity:,description:,cause:,recovery:,failure:)` for a description.
@@ -270,6 +272,7 @@ public extension LocalizedError {
 		- severity: Optional severity of the error. See `Severity` type
 		- description: An optional `Clause` that is used as the description. If not specified, the value of `name` is taken
 		- cause: An optional `Error` that caused this error
+		- userInfo: Optional dictionary `[String : Any]` which can be used to store arbitrary user defined information
 		- recovery: An optional `Clause` that is displayed as the recovery suggestion. Defaults to nil which means no recovery suggestion is displayed.
 		- failure: Optional closure returning a `Clause` which is displayed as the failure reason aka error-message. Defaults to nil which is no error message.
 	- Returns: An instance of the concrete type that conforms `LocalizedError`
@@ -280,6 +283,7 @@ public extension LocalizedError {
 		severity: Severity? = nil,
 		description: Clause? = nil,
 		cause: Error? = nil,
+		userInfo: [String : Any]? = nil,
 		recovery: Clause? = nil,
 		failure: FailureText? = nil
 	) -> Self
@@ -443,6 +447,7 @@ public extension LocalizedError {
 
 // MARK: - Error Storing
 
+/// 
 public protocol ErrorStoring {}
 
 fileprivate extension ErrorStoring where Self == ErrorStore {
@@ -451,6 +456,7 @@ fileprivate extension ErrorStoring where Self == ErrorStore {
 	var severity: Severity? { severity }
 	var description: Clause { description }
 	var cause: Error? { cause }
+	var userInfo: [String : Any ]? { userInfo }
 	var recovery: Clause? { recovery }
 	var failure: Clause? { failure }
 }
@@ -471,6 +477,7 @@ private struct ErrorStore: ErrorStoring {
 	fileprivate let code: Int?
 	fileprivate let severity: Severity?
 	fileprivate let description: Clause
+	fileprivate let userInfo: [String : Any]?
 	fileprivate let cause: Error?
 	fileprivate let recovery: Clause?
 	fileprivate let failure: Clause?
@@ -481,11 +488,12 @@ private struct ErrorStore: ErrorStoring {
 		severity: Severity? = nil,
 		description: Clause? = nil,
 		cause: Error? = nil,
+		userInfo: [String : Any]? = nil,
 		recovery: Clause? = nil,
 		failure: FailureText? = nil
 	) -> T
 	{
-		return T(store: Self(name: name, code: code, severity: severity, description: description, cause: cause, recovery: recovery, failure: failure))
+		return T(store: Self(name: name, code: code, severity: severity, description: description, cause: cause, userInfo: userInfo, recovery: recovery, failure: failure))
 	}
 
 	/** Initialize a new instance of `ErrorSpecifics`
@@ -499,13 +507,21 @@ private struct ErrorStore: ErrorStoring {
 	   	- recovery: The `recoverySuggestion`
 	   	- failure: The `failureReason`
 	*/
-	private init(name: String, code: Int? =  nil, severity: Severity? = nil, description: Clause? = nil, cause: Error? = nil, recovery: Clause? = nil, failure: FailureText? = nil) {
+	private init(name: String,
+				 code: Int? =  nil,
+				 severity: Severity? = nil,
+				 description: Clause? = nil,
+				 cause: Error? = nil,
+				 userInfo: [String : Any]? = nil,
+				 recovery: Clause? = nil,
+				 failure: FailureText? = nil) {
 		let name = String(name[..<(name.firstIndex(of: "(") ?? name.endIndex)])
 		self.name = name
 		self.code = code
 		self.severity = severity
 		self.description = description ?? Clause(stringLiteral: name)
 		self.cause = cause
+		self.userInfo = userInfo
 		self.recovery = recovery
 		self.failure = failure?()
 	}
