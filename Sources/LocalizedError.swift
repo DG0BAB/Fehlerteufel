@@ -143,7 +143,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	var cause: Error? { get }
 
 	/// A dictionary with some user specific information
-	var userInfo: [String : Any]? { get }
+	var userInfo: [LocalizedErrorUserInfoKey : Any]? { get }
 
 	/** This prefix is prepended to keys when retrieving the localized string
 	for the error description from a .strings-file.
@@ -192,6 +192,7 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	__Required.__ Default implementation provided
 	*/
 	var recoveryPrefix: String { get }
+
 }
 
 /// Typealias for `Fehlerteufel.LocalizedError` to remove ambiguity with `Foundation.LocalizedError`
@@ -215,7 +216,7 @@ public extension LocalizedError {
 		return errorStore.cause
 	}
 
-	var userInfo: [String : Any]? {
+	var userInfo: [LocalizedErrorUserInfoKey : Any]? {
 		return errorStore.userInfo
 	}
 
@@ -263,7 +264,7 @@ public extension LocalizedError {
 		severity: Severity? = nil,
 		description: Clause? = nil,
 		cause: Error? = nil,
-		userInfo: [String : Any]? = nil,
+		userInfo: [LocalizedErrorUserInfoKey : Any]? = nil,
 		recovery: Clause? = nil,
 		failure: FailureText? = nil
 	) -> Self
@@ -290,7 +291,7 @@ public extension LocalizedError {
 		severity: Severity? = nil,
 		description: Clause? = nil,
 		cause: Error? = nil,
-		userInfo: [String : Any]? = nil,
+		userInfo: [LocalizedErrorUserInfoKey : Any]? = nil,
 		recovery: Clause? = nil,
 		failure: FailureText? = nil
 	) -> Self
@@ -452,6 +453,14 @@ public extension LocalizedError {
 }
 #endif
 
+public struct LocalizedErrorUserInfoKey: ExpressibleByStringLiteral, Hashable {
+	public typealias StringLiteralType = String
+	let rawValue: StringLiteralType
+	public init(stringLiteral value: Self.StringLiteralType) {
+		rawValue = value
+	}
+}
+
 // MARK: - Error Storing
 
 /// Type for storing the details of a `LocalizedError`
@@ -474,7 +483,7 @@ private struct ErrorStore: ErrorStoring {
 	fileprivate let severity: Severity?
 	fileprivate let description: Clause
 	fileprivate let cause: Error?
-	fileprivate let userInfo: [String : Any]?
+	fileprivate let userInfo: [LocalizedErrorUserInfoKey : Any]?
 	fileprivate let recovery: Clause?
 	fileprivate let failure: Clause?
 
@@ -484,7 +493,7 @@ private struct ErrorStore: ErrorStoring {
 		severity: Severity? = nil,
 		description: Clause? = nil,
 		cause: Error? = nil,
-		userInfo: [String : Any]? = nil,
+		userInfo: [LocalizedErrorUserInfoKey : Any]? = nil,
 		recovery: Clause? = nil,
 		failure: FailureText? = nil
 	) -> T
@@ -509,7 +518,7 @@ private struct ErrorStore: ErrorStoring {
 				 severity: Severity? = nil,
 				 description: Clause? = nil,
 				 cause: Error? = nil,
-				 userInfo: [String : Any]? = nil,
+				 userInfo: [LocalizedErrorUserInfoKey : Any]? = nil,
 				 recovery: Clause? = nil,
 				 failure: FailureText? = nil) {
 		let name = String(name[..<(name.firstIndex(of: "(") ?? name.endIndex)])
