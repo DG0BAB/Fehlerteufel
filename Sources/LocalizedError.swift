@@ -142,7 +142,9 @@ public protocol LocalizedError: Foundation.LocalizedError, CustomStringConvertib
 	/// __Required.__ Default implementation provided
 	var cause: Error? { get }
 
-	/// A dictionary with some user specific information
+	/// A dictionary with user specific information
+	/// Returns the nearest `userInfo` by following `cause`
+	/// as long as `cause` is of type `LocalizedError`. Otherwise `nil`
 	var userInfo: [LocalizedErrorUserInfoKey : Any]? { get }
 
 	/** This prefix is prepended to keys when retrieving the localized string
@@ -217,7 +219,15 @@ public extension LocalizedError {
 	}
 
 	var userInfo: [LocalizedErrorUserInfoKey : Any]? {
-		return errorStore.userInfo
+		var localizedError: LocalizedError? = self
+		repeat {
+			guard localizedError?.errorStore.userInfo != nil else {
+				localizedError = localizedError?.cause?.asLocalizedError
+				continue
+			}
+			break
+		} while localizedError != nil
+		return localizedError?.errorStore.userInfo
 	}
 
 	var errorDescription: String? {
