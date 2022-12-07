@@ -3,7 +3,7 @@
     "pins": [
       {
         "package": "Clause",
-        "repositoryURL": "git@github.com:DG0BAB/Clause.git",
+        "repositoryURL": "https://github.com/DG0BAB/Clause.git",
         "state": {
           "branch": "master",
           "revision": "b30c67c5a0e3e9381cade01969bcbd9b26291e33",
